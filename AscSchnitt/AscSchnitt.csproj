@@ -12,13 +12,13 @@
 
   <!--
     Build with:
-      dotnet build -c Release /p:AutoCADInstallDir="C:\Program Files\Autodesk\AutoCAD 2024"
+      dotnet build -c Release /p:AutoCADInstallDir="C:\Program Files\Autodesk\AutoCAD 2022"
 
     Adjust AutoCADInstallDir to the folder that contains AcMgd.dll and AcDbMgd.dll.
     For many AutoCAD Map 3D installations this is the main AutoCAD program folder.
   -->
   <PropertyGroup Condition="'$(AutoCADInstallDir)' == ''">
-    <AutoCADInstallDir>C:\Program Files\Autodesk\AutoCAD 2024</AutoCADInstallDir>
+    <AutoCADInstallDir>C:\Program Files\Autodesk\AutoCAD 2022</AutoCADInstallDir>
   </PropertyGroup>
 
   <ItemGroup>

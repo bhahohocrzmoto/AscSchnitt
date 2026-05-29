@@ -49,7 +49,7 @@ The project references these AutoCAD .NET assemblies:
 They are usually in the main AutoCAD or AutoCAD Map 3D installation folder, for example:
 
 ```text
-C:\Program Files\Autodesk\AutoCAD 2024
+C:\Program Files\Autodesk\AutoCAD 2022
 ```
 
 ## Build
@@ -57,10 +57,10 @@ C:\Program Files\Autodesk\AutoCAD 2024
 Install the .NET SDK that can build `net48` projects, then run from this folder:
 
 ```powershell
-dotnet build .\AscSchnitt\AscSchnitt.csproj -c Release /p:AutoCADInstallDir="C:\Program Files\Autodesk\AutoCAD 2024"
+dotnet build .\AscSchnitt\AscSchnitt.csproj -c Release /p:AutoCADInstallDir="C:\Program Files\Autodesk\AutoCAD 2022"
 ```
 
-Adjust `AutoCADInstallDir` to the folder containing your AutoCAD assemblies. This project targets `net48`, which fits many AutoCAD/Map 3D installations up to the .NET Framework-based API generation. If your installed AutoCAD uses Autodesk's newer .NET runtime, keep the source files and change the target framework to the one required by that AutoCAD SDK/version.
+Adjust `AutoCADInstallDir` to the folder containing your AutoCAD assemblies. This project targets `net48`, which fits AutoCAD 2022's .NET Framework-based API.
 
 The DLL will be created under:
 
