@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ascschnitt"
+version = "0.1.0"
+description = "Pure Python ASC terrain section sampler with CSV and DXF output"
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+
+[project.scripts]
+ascschnitt = "ascschnitt.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["ascschnitt*"]
