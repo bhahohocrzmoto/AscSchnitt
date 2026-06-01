@@ -15,6 +15,7 @@ ASC_SCHNITT
 - Samples a picked start/end section line at a chosen spacing.
 - Loads raster tiles only when sampled points need them.
 - Supports German decimal commas in headers and raster values.
+- Accepts ASC files with or without the optional `NODATA_value` header line.
 - Uses bilinear interpolation when the four neighbouring cells are valid.
 - Falls back to nearest-neighbour sampling if bilinear interpolation touches `NODATA`.
 - Splits profile output into multiple polylines across missing/NODATA gaps.
@@ -35,7 +36,10 @@ AscSchnitt/
   AscGridTile.cs
   AscGridIndex.cs
   SchnittSample.cs
+  SectionSampler.cs
   SchnittCommand.cs
+AscSchnitt.Tests/
+  AscSchnitt.Tests.csproj
 ```
 
 ## Required AutoCAD References
@@ -81,6 +85,16 @@ AscSchnitt\bin\Release\net48\AscSchnitt.dll
 9. Pick the insertion point for the profile.
 10. Accept the automatic datum or enter a custom datum.
 11. Accept the default CSV export path or enter a custom path.
+
+## Tests
+
+Everything except `SchnittCommand` (header parsing, tile loading and section sampling) has
+no AutoCAD dependency and is covered by the `AscSchnitt.Tests` project. That project compiles
+those source files directly, so the tests run without AutoCAD installed:
+
+```powershell
+dotnet test .\AscSchnitt.Tests\AscSchnitt.Tests.csproj
+```
 
 ## ASC Coordinate Handling
 

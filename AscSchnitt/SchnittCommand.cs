@@ -48,15 +48,13 @@ namespace AscSchnitt
                 double verticalExaggeration = PromptDouble(ed, "\nVertical exaggeration <1.0>: ", 1.0, minExclusive: 0.0);
                 Point3d insertion = PromptPoint(ed, "\nInsertion point for profile: ");
 
-                double xmin = Math.Min(start.X, end.X);
-                double xmax = Math.Max(start.X, end.X);
-                double ymin = Math.Min(start.Y, end.Y);
-                double ymax = Math.Max(start.Y, end.Y);
-                List<AscGridHeader> intersectingTiles = index.FindTilesIntersectingBoundingBox(xmin, ymin, xmax, ymax);
-
-                // Cache only the tiles that are actually touched by samples.
-                var cache = new Dictionary<string, AscGridTile>(StringComparer.OrdinalIgnoreCase);
-                List<SchnittSample> samples = SampleRoute(start, end, sampleSpacing, intersectingTiles, cache);
+                // All terrain sampling lives in SectionSampler, which has no AutoCAD dependency.
+                // The command only converts AutoCAD points to plain coordinates and draws the result.
+                var sampler = new SectionSampler(index);
+                List<SchnittSample> samples = sampler.SampleLine(
+                    new SamplePoint2d(start.X, start.Y),
+                    new SamplePoint2d(end.X, end.Y),
+                    sampleSpacing);
 
                 List<SchnittSample> validSamples = samples.Where(s => s.Z.HasValue).ToList();
                 if (validSamples.Count == 0)
@@ -99,7 +97,8 @@ namespace AscSchnitt
                 int invalid = samples.Count - validSamples.Count;
                 ed.WriteMessage("\nASC_SCHNITT complete.");
                 ed.WriteMessage("\nASC files scanned: {0}", index.Headers.Count);
-                ed.WriteMessage("\nTiles intersecting section bounding box: {0}", intersectingTiles.Count);
+                ed.WriteMessage("\nTiles intersecting section bounding box: {0}", sampler.LastCandidateCount);
+                ed.WriteMessage("\nTiles loaded: {0}", sampler.LoadedTileCount);
                 ed.WriteMessage("\nSamples: {0}", samples.Count);
                 ed.WriteMessage("\nValid samples: {0}", validSamples.Count);
                 ed.WriteMessage("\nInvalid/NODATA samples: {0}", invalid);
@@ -111,53 +110,6 @@ namespace AscSchnitt
             {
                 ed.WriteMessage("\nASC_SCHNITT failed: {0}", ex.Message);
             }
-        }
-
-        private static List<SchnittSample> SampleRoute(
-            Point3d start,
-            Point3d end,
-            double sampleSpacing,
-            List<AscGridHeader> candidateTiles,
-            Dictionary<string, AscGridTile> cache)
-        {
-            double dx = end.X - start.X;
-            double dy = end.Y - start.Y;
-            double length = Math.Sqrt(dx * dx + dy * dy);
-            int segmentCount = length <= 0.0 ? 0 : Math.Max(1, (int)Math.Ceiling(length / sampleSpacing));
-            var samples = new List<SchnittSample>(segmentCount + 1);
-
-            for (int i = 0; i <= segmentCount; i++)
-            {
-                double distance = Math.Min(i * sampleSpacing, length);
-                double t = length <= 0.0 ? 0.0 : distance / length;
-                double x = start.X + t * dx;
-                double y = start.Y + t * dy;
-
-                AscGridHeader? header = candidateTiles.FirstOrDefault(tile => tile.Contains(x, y));
-                if (header == null)
-                {
-                    // Missing tile: keep the sample in the CSV and split the drawn profile at this point.
-                    samples.Add(new SchnittSample { Distance = distance, X = x, Y = y, Z = null, SourceFile = string.Empty });
-                    continue;
-                }
-
-                if (!cache.TryGetValue(header.FilePath, out AscGridTile? tile))
-                {
-                    tile = AscGridTile.Load(header);
-                    cache.Add(header.FilePath, tile);
-                }
-
-                samples.Add(new SchnittSample
-                {
-                    Distance = distance,
-                    X = x,
-                    Y = y,
-                    Z = tile.Sample(x, y),
-                    SourceFile = header.FilePath
-                });
-            }
-
-            return samples;
         }
 
         private static void DrawProfile(
