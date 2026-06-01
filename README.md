@@ -44,6 +44,8 @@ coordinate system.
 ```text
 ascschnitt/
   asc_header.py      # ASC header parsing
+  extent_scan.py     # GK folder mapping and ASC extent scanning for the GUI
+  gui_launcher.py    # Tkinter GUI launcher for non-programmer users
   tile.py            # ASC raster loading and interpolation
   index.py           # recursive ASC tile indexing
   sampler.py         # section sampling logic
@@ -83,6 +85,58 @@ python -m ascschnitt \
 ```
 
 At least one of `--csv` or `--dxf` is required.
+
+## GUI Launcher
+
+A standard-library Tkinter GUI is available for users who prefer not to build the
+command line manually. Start it from the repository root with:
+
+```bash
+python -m ascschnitt.gui_launcher
+```
+
+On Windows, the same command can be put into a small `.bat` file, for example:
+
+```bat
+@echo off
+cd /d C:\path\to\AscSchnitt
+python -m ascschnitt.gui_launcher
+pause
+```
+
+Basic workflow:
+
+1. Select the ASC root folder, for example
+   `\\grid.inet\data\Proj_K\EGIS_Vermessung\Laserscan\OpenData Geländemodelle\DGM\1m\asc\2025.07`.
+2. Choose the GK zone / EPSG entry:
+   - `EPSG:31254 - MGI / Austria GK West - m28`
+   - `EPSG:31255 - MGI / Austria GK Central - m31`
+   - `EPSG:31256 - MGI / Austria GK East - m34`
+3. Click **Scan ASC folders**. The GUI scans only the matching ASC data folder
+   (`m28`, `m31`, or `m34`) and displays the number of ASC files, overall
+   coordinate extent, and cellsize range.
+4. Enter start X, start Y, end X, and end Y. Decimal dots and decimal commas are
+   accepted.
+5. Select an output folder and optionally adjust sample spacing, vertical
+   exaggeration, insertion point, and output base name.
+6. Click **Run Schnitt**. The GUI validates that the section intersects the
+   scanned ASC tiles, writes `<basename>.csv` and `<basename>.dxf`, and shows the
+   saved paths.
+7. Open or import the resulting DXF in AutoCAD.
+
+Important notes:
+
+- `.asc` files are required because they contain the terrain raster/elevation
+  data.
+- `.prj`, `.xml`, and `.aux.xml` files are metadata and are not required for
+  section generation.
+- Folders whose names contain `prjxml`, such as `m28prjxml`, `m31prjxml`, and
+  `m34prjxml`, are metadata folders and are ignored by default.
+- No coordinate transformation is performed. Choosing an EPSG entry only selects
+  the matching ASC folder/zone. Coordinates must already be in the selected GK
+  coordinate system. If coordinates for another GK zone are entered, the GUI will
+  warn that the start/end points are outside the available tiles instead of
+  silently switching zones.
 
 ## Optional Editable Install
 

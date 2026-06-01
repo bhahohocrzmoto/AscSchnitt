@@ -10,6 +10,13 @@ from pathlib import Path
 from ascschnitt.asc_header import read_header
 from ascschnitt.csv_export import export_csv
 from ascschnitt.dxf_export import automatic_datum, export_dxf
+from ascschnitt.extent_scan import (
+    GK_BY_EPSG,
+    discover_gk_folders,
+    iter_relevant_asc_files,
+    parse_user_float,
+    scan_extent,
+)
 from ascschnitt.index import AscGridIndex
 from ascschnitt.models import SamplePoint2d
 from ascschnitt.sampler import SectionSampler
@@ -134,6 +141,75 @@ class AscSchnittTests(unittest.TestCase):
             self.assertIn("ASC_SCHNITT Python complete", result.stdout)
             self.assertTrue(csv_path.exists())
             self.assertTrue(dxf_path.exists())
+
+
+
+class ExtentScanTests(unittest.TestCase):
+    def _write_asc(self, path: Path, text: str = ASC_TEXT) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def test_extent_scan_corner_coordinates(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self._write_asc(root / "m28" / "tile.asc")
+
+            result = scan_extent(root, 31254)
+
+            self.assertEqual(result.asc_file_count, 1)
+            self.assertEqual(result.folder_name, "m28")
+            self.assertEqual(result.xmin, 0.0)
+            self.assertEqual(result.xmax, 3.0)
+            self.assertEqual(result.ymin, 0.0)
+            self.assertEqual(result.ymax, 3.0)
+            self.assertEqual(result.min_cellsize, 1.0)
+            self.assertEqual(result.max_cellsize, 1.0)
+
+    def test_extent_scan_center_coordinates_and_decimal_commas(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self._write_asc(root / "m31" / "tile.asc", ASC_COMMA_TEXT)
+
+            result = scan_extent(root, "EPSG:31255")
+
+            self.assertEqual(result.asc_file_count, 1)
+            self.assertEqual(result.folder_name, "m31")
+            self.assertEqual(result.xmin, 0.0)
+            self.assertEqual(result.xmax, 2.0)
+            self.assertEqual(result.ymin, 0.0)
+            self.assertEqual(result.ymax, 2.0)
+            self.assertEqual(parse_user_float("1,25", "test"), 1.25)
+
+    def test_prjxml_folders_are_ignored(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self._write_asc(root / "m34" / "tile.asc")
+            self._write_asc(root / "m34prjxml" / "metadata.asc")
+            self._write_asc(root / "m34" / "nestedprjxml" / "metadata.asc")
+
+            found = discover_gk_folders(root)
+            files = list(iter_relevant_asc_files(root / "m34"))
+            result = scan_extent(root, 31256)
+
+            self.assertEqual(found[31256], root / "m34")
+            self.assertEqual(files, [root / "m34" / "tile.asc"])
+            self.assertEqual(result.asc_file_count, 1)
+
+    def test_epsg_folder_mapping(self) -> None:
+        self.assertEqual(GK_BY_EPSG[31254].folder_name, "m28")
+        self.assertEqual(GK_BY_EPSG[31255].folder_name, "m31")
+        self.assertEqual(GK_BY_EPSG[31256].folder_name, "m34")
+
+    def test_point_and_line_extent_checks(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self._write_asc(root / "m28" / "tile.asc")
+            result = scan_extent(root, 31254)
+
+            self.assertIsNotNone(result.point_tile(0.5, 0.5))
+            self.assertIsNone(result.point_tile(10.0, 10.0))
+            self.assertEqual(len(result.line_bbox_tiles(-1.0, 1.0, 1.0, 1.0)), 1)
+            self.assertEqual(result.line_bbox_tiles(10.0, 10.0, 11.0, 11.0), [])
 
 
 if __name__ == "__main__":
