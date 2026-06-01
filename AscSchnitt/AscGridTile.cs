@@ -15,7 +15,9 @@ namespace AscSchnitt
 
             using (var reader = new StreamReader(header.FilePath))
             {
-                for (int i = 0; i < 6; i++)
+                // Skip the exact number of header/blank lines detected when the header was
+                // read, so files with or without the optional NODATA_value line both work.
+                for (int i = 0; i < header.HeaderLineCount; i++)
                 {
                     if (reader.ReadLine() == null)
                     {
@@ -63,16 +65,42 @@ namespace AscSchnitt
         public double? SampleNearest(double x, double y)
         {
             GetFloatIndices(x, y, out double colFloat, out double rowFloat);
-            int col = (int)Math.Round(colFloat, MidpointRounding.AwayFromZero);
-            int row = (int)Math.Round(rowFloat, MidpointRounding.AwayFromZero);
 
-            if (row < 0 || row >= Header.NRows || col < 0 || col >= Header.NCols)
+            int? col = NearestIndex(colFloat, Header.NCols);
+            int? row = NearestIndex(rowFloat, Header.NRows);
+            if (col == null || row == null)
             {
                 return null;
             }
 
-            double value = Values[row, col];
+            double value = Values[row.Value, col.Value];
             return IsNoData(value) ? (double?)null : value;
+        }
+
+        // Maps a floating cell-centre index to the nearest integer cell index. Cell centres
+        // sit at integer indices, so the tile footprint spans [-0.5, count - 0.5] in index
+        // space. Points inside that band snap to the nearest cell, with the outer half-cell
+        // rim (and the exact boundary) clamped to the edge cell rather than failing; points
+        // genuinely outside the footprint return null.
+        private static int? NearestIndex(double floatIndex, int count)
+        {
+            const double eps = 1e-9;
+            if (floatIndex < -0.5 - eps || floatIndex > count - 0.5 + eps)
+            {
+                return null;
+            }
+
+            int index = (int)Math.Floor(floatIndex + 0.5);
+            if (index < 0)
+            {
+                index = 0;
+            }
+            else if (index > count - 1)
+            {
+                index = count - 1;
+            }
+
+            return index;
         }
 
         public double? SampleBilinear(double x, double y)
@@ -116,7 +144,8 @@ namespace AscSchnitt
 
         private bool IsNoData(double value)
         {
-            return Math.Abs(value - Header.NoData) < 1e-9;
+            // NaN is never valid terrain, so treat it like NODATA and keep it out of profiles.
+            return double.IsNaN(value) || Math.Abs(value - Header.NoData) < 1e-9;
         }
     }
 }
